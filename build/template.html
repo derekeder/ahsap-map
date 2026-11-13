@@ -1,0 +1,603 @@
+<title>Cook County AHSAP Map</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/*LEAFLET_CSS*/
+</style>
+<style>
+/* Layout: full-height app. Side ledger (filters + summary) beside a vector map of townships; stacks map-over-ledger on phones. */
+:root {
+  --bg: #eef1ef;
+  --panel: #fbfcfb;
+  --fg: #1c2421;
+  --muted: #5d6b66;
+  --line: #d5dcd9;
+  --land: #f7f9f8;
+  --land-chi: #e9eeec;
+  --twp-line: #8c9a95;
+  --muni-line: #c9d2ce;
+  --accent: #1f5f8b;
+  --t35: #0f7a64;
+  --t15: #c47a12;
+  --tlac: #7b4bb3;
+  --hl: #d4343f;
+  --chip: #e5eae8;
+  --f-display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111715; --panel: #171e1c; --fg: #e3ebe8; --muted: #93a39d; --line: #2c3633;
+    --land: #1c2422; --land-chi: #222c29; --twp-line: #5f6e69; --muni-line: #2e3936;
+    --accent: #6fb2e0; --t35: #34c2a0; --t15: #f0a53a; --tlac: #b08ae6; --hl: #ff6b73; --chip: #232c29;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111715; --panel: #171e1c; --fg: #e3ebe8; --muted: #93a39d; --line: #2c3633;
+  --land: #1c2422; --land-chi: #222c29; --twp-line: #5f6e69; --muni-line: #2e3936;
+  --accent: #6fb2e0; --t35: #34c2a0; --t15: #f0a53a; --tlac: #b08ae6; --hl: #ff6b73; --chip: #232c29;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 14px; line-height: 1.45; }
+.app { height: 100%; display: grid; grid-template-columns: 360px 1fr; }
+.ledger { background: var(--panel); border-right: 1px solid var(--line); overflow-y: auto; display: flex; flex-direction: column; gap: 22px;
+  padding-block: 20px 24px; padding-left: max(18px, env(safe-area-inset-left, 0px)); padding-right: 18px; min-width: 0; }
+.mapwrap { position: relative; min-width: 0; }
+#map { position: absolute; inset: 0; background: var(--bg); }
+
+.eyebrow { font-family: var(--f-display); font-stretch: 85%; font-weight: 600; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--f-display); font-stretch: 78%; font-weight: 800; font-size: 30px; line-height: 1.02; margin: 4px 0 8px; text-wrap: balance; letter-spacing: -.01em; }
+.lede { color: var(--muted); margin: 0; max-width: 60ch; }
+h2 { font-family: var(--f-display); font-stretch: 85%; font-weight: 700; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; margin: 0 0 8px; color: var(--muted); }
+
+.totals { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.totals div { background: var(--panel); padding: 10px 12px; }
+.totals b { display: block; font-family: var(--f-display); font-stretch: 85%; font-weight: 700; font-size: 26px; line-height: 1; font-variant-numeric: tabular-nums; }
+.totals span { font-size: 12px; color: var(--muted); }
+
+.tiers { display: flex; flex-direction: column; gap: 6px; }
+.tier { display: grid; grid-template-columns: 18px 1fr auto; gap: 4px 10px; align-items: start; text-align: left; width: 100%;
+  background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 9px 10px; color: var(--fg); font: inherit; cursor: pointer; }
+.tier:hover { border-color: var(--muted); }
+.tier[aria-pressed="false"] { opacity: .45; }
+.tier[aria-pressed="false"] .sw { background: transparent !important; }
+.tier .sw { width: 12px; height: 12px; border-radius: 50%; margin-top: 3px; border: 2px solid var(--c); background: var(--c); }
+.tier .nm { font-weight: 600; }
+.tier .ct { font-family: var(--f-mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tier .ds { grid-column: 2 / 4; font-size: 12px; color: var(--muted); }
+
+.years { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; align-items: end; }
+.yr { display: flex; flex-direction: column; align-items: stretch; gap: 4px; background: none; border: 0; padding: 0; cursor: pointer; color: var(--fg); font: inherit; }
+.yr .bar { height: 46px; display: flex; align-items: flex-end; border-bottom: 1px solid var(--line); }
+.yr .bar i { display: block; width: 100%; background: var(--accent); border-radius: 3px 3px 0 0; min-height: 2px; }
+.yr .lb { font-family: var(--f-mono); font-size: 12px; text-align: center; }
+.yr .n { font-family: var(--f-mono); font-size: 11px; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
+.yr[aria-pressed="false"] .bar i { background: var(--line); }
+.yr[aria-pressed="false"] .lb { color: var(--muted); text-decoration: line-through; }
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+select, input[type="search"] { width: 100%; font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
+select:focus-visible, input:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.results { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.results:empty { display: none; }
+.results button { width: 100%; text-align: left; background: var(--panel); border: 0; border-top: 1px solid var(--line); padding: 8px 10px; color: var(--fg); font: inherit; cursor: pointer; display: flex; justify-content: space-between; gap: 10px; }
+.results li:first-child button { border-top: 0; }
+.results button:hover { background: var(--chip); }
+.results small { color: var(--muted); font-family: var(--f-mono); white-space: nowrap; }
+
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { background: transparent; border: 0; padding: 7px 12px; font: inherit; font-size: 13px; color: var(--muted); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--fg); color: var(--panel); }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; font-size: 13px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+
+.foot { margin-top: auto; font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--line); padding-top: 14px; }
+.foot a { color: var(--accent); }
+
+/* Map styling */
+.leaflet-container { font-family: var(--f-body); background: var(--bg); }
+.twp { fill: var(--land); fill-opacity: 1; stroke: var(--twp-line); stroke-width: 1.2; }
+.twp.chi { fill: var(--land-chi); }
+.twp.sel { stroke: var(--fg); stroke-width: 2.4; }
+.muni { fill: var(--accent); fill-opacity: 0; stroke: var(--muni-line); stroke-width: .8; }
+#map .leaflet-pane > svg path.muni { pointer-events: none; }
+/* Municipality mode: municipalities become clickable and shaded by AHSAP parcel count; townships step back */
+#map.bmode-muni .leaflet-pane > svg path.muni { pointer-events: auto; cursor: pointer; }
+#map.bmode-muni .leaflet-pane > svg path.twp { pointer-events: none; }
+.bmode-muni .muni { stroke: var(--accent); stroke-opacity: .55; }
+.bmode-muni .muni.q1 { fill-opacity: .07; }
+.bmode-muni .muni.q2 { fill-opacity: .15; }
+.bmode-muni .muni.q3 { fill-opacity: .25; }
+.bmode-muni .muni.q4 { fill-opacity: .36; }
+.bmode-muni .muni.q5 { fill-opacity: .48; }
+.bmode-muni .muni:hover { stroke-width: 2; stroke-opacity: 1; }
+.bmode-muni .twp { stroke-opacity: .35; }
+.bmode-muni .twp-label { display: none; }
+.muni.sel { stroke: var(--fg) !important; stroke-width: 2.6 !important; stroke-opacity: 1 !important; }
+/* With street tiles underneath: township fills go clear (still clickable), municipal lines step back */
+.has-tiles .twp { fill: var(--accent); fill-opacity: 0; stroke-opacity: .7; }
+.has-tiles .twp:hover { fill-opacity: .06; }
+.has-tiles .twp.sel { fill-opacity: .08; stroke-opacity: 1; }
+.has-tiles:not(.bmode-muni) .muni { display: none; }
+.leaflet-tooltip { background: var(--panel); color: var(--fg); border: 1px solid var(--line); box-shadow: 0 2px 10px rgba(0,0,0,.18); font-size: 12px; }
+.leaflet-tooltip b { font-family: var(--f-display); font-stretch: 85%; font-size: 14px; }
+.leaflet-tooltip-left::before { border-left-color: var(--line); }
+.leaflet-tooltip-right::before { border-right-color: var(--line); }
+
+/* Municipality count table */
+.mtable-wrap { max-height: 280px; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px; }
+.mtable { width: 100%; border-collapse: collapse; font-size: 13px; }
+.mtable th { position: sticky; top: 0; background: var(--panel); text-align: left; font-family: var(--f-display); font-stretch: 85%; font-weight: 600; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 7px 10px; border-bottom: 1px solid var(--line); }
+.mtable td { padding: 6px 10px; border-top: 1px solid var(--line); }
+.mtable tr:first-child td { border-top: 0; }
+.mtable .num { text-align: right; font-family: var(--f-mono); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mtable tbody tr { cursor: pointer; }
+.mtable tbody tr:hover td { background: var(--chip); }
+.mtable tbody tr.sel td { background: var(--chip); font-weight: 600; }
+.mtable .bar { display: block; height: 3px; margin-top: 3px; background: var(--accent); border-radius: 2px; opacity: .7; }
+.mtable .partly { color: var(--muted); font-size: 11px; }
+.mlegend { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); font-family: var(--f-mono); }
+.mlegend i { width: 18px; height: 10px; border: 1px solid var(--accent); background: color-mix(in srgb, var(--accent) calc(var(--o) * 100%), transparent); }
+.twp-label { font-family: var(--f-display); font-stretch: 80%; font-weight: 600; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); white-space: nowrap; text-align: center; pointer-events: none; text-shadow: 0 0 3px var(--land), 0 0 3px var(--land); }
+.map-hidden-labels .twp-label { display: none; }
+.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--panel); color: var(--fg); box-shadow: 0 6px 24px rgba(0,0,0,.25); }
+.leaflet-popup-content-wrapper { border-radius: 8px; }
+.leaflet-popup-content { margin: 14px 16px; min-width: 220px; font-size: 13px; line-height: 1.4; }
+.leaflet-container a.leaflet-popup-close-button { color: var(--muted); }
+.pop h3 { font-family: var(--f-display); font-stretch: 85%; font-weight: 700; font-size: 17px; line-height: 1.15; margin: 0 22px 8px 0; text-wrap: balance; }
+.pop dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; margin: 8px 0; }
+.pop dt { color: var(--muted); }
+.pop dd { margin: 0; font-variant-numeric: tabular-nums; }
+.pop .mono { font-family: var(--f-mono); font-size: 12px; }
+.pop .badge { display: inline-block; font-family: var(--f-mono); font-size: 11px; font-weight: 500; padding: 2px 7px; border-radius: 99px; color: #fff; background: var(--c); }
+.pop a { color: var(--accent); }
+.pop .pins { max-height: 120px; overflow-y: auto; font-family: var(--f-mono); font-size: 12px; columns: 2; margin: 4px 0 8px; }
+.leaflet-bar a { background: var(--panel); color: var(--fg); border-color: var(--line); }
+.leaflet-bar a:hover { background: var(--chip); }
+.leaflet-control-attribution { background: color-mix(in srgb, var(--panel) 85%, transparent) !important; color: var(--muted); }
+.leaflet-control-attribution a { color: var(--accent); }
+
+.legend { position: absolute; z-index: 500; right: max(12px, env(safe-area-inset-right, 0px)); top: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font-size: 12px; display: flex; flex-direction: column; gap: 4px; }
+.legend span { display: flex; align-items: center; gap: 7px; }
+.legend i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); display: inline-block; }
+.legend em { font-style: normal; color: var(--muted); }
+
+@media (max-width: 760px) {
+  .app { grid-template-columns: 1fr; grid-template-rows: 58% 1fr; }
+  .mapwrap { grid-row: 1; }
+  .ledger { grid-row: 2; border-right: 0; border-top: 1px solid var(--line); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  h1 { font-size: 26px; }
+  .legend { display: none; }
+}
+</style>
+
+<div class="app">
+  <aside class="ledger" aria-label="Filters and summary">
+    <header>
+      <div class="eyebrow">Cook County Assessor · AHSAP</div>
+      <h1>Affordable Housing Special Assessment Parcels</h1>
+      <p class="lede">Rental properties receiving an assessment reduction in exchange for keeping units affordable at or below 60% of Area Median Income.</p>
+    </header>
+
+    <section aria-label="Totals shown">
+      <div class="totals">
+        <div><b id="nParcels">0</b><span>parcels (PINs) shown</span></div>
+        <div><b id="nProjects">0</b><span>projects shown</span></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Incentive tier</h2>
+      <div class="tiers" id="tiers"></div>
+    </section>
+
+    <section>
+      <div class="row"><h2 style="margin:0">First year in program</h2><button class="linkbtn" id="yrAll" type="button">All years</button></div>
+      <div class="years" id="years" style="margin-top:10px"></div>
+    </section>
+
+    <section class="field">
+      <div class="row">
+        <h2 style="margin:0">Map boundaries</h2>
+        <div class="seg" role="group" aria-label="Map boundaries">
+          <button type="button" id="bTwp" aria-pressed="false">Townships</button>
+          <button type="button" id="bMuni" aria-pressed="true">Municipalities</button>
+        </div>
+      </div>
+      <div class="mlegend" id="mlegend" aria-hidden="true"></div>
+    </section>
+
+    <section class="field">
+      <label for="muni"><h2 style="margin:0">Municipality</h2></label>
+      <select id="muni"><option value="">All municipalities</option></select>
+      <div class="mtable-wrap">
+        <table class="mtable" aria-label="AHSAP parcels by municipality">
+          <thead><tr><th>Municipality</th><th class="num">Parcels</th><th class="num">Projects</th></tr></thead>
+          <tbody id="mbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="field">
+      <label for="twp"><h2 style="margin:0">Township</h2></label>
+      <select id="twp"><option value="">All townships</option></select>
+    </section>
+
+    <section class="field">
+      <label for="q"><h2 style="margin:0">Find a project or PIN</h2></label>
+      <input id="q" type="search" placeholder="e.g. Carriage Creek or 31-34-200-028" autocomplete="off">
+      <ul class="results" id="results"></ul>
+    </section>
+
+    <section class="row">
+      <h2 style="margin:0">Show</h2>
+      <div class="seg" role="group" aria-label="Map points">
+        <button type="button" id="modeParcel" aria-pressed="true">Each parcel</button>
+        <button type="button" id="modeProject" aria-pressed="false">Each project</button>
+      </div>
+    </section>
+
+    <footer class="foot">
+      <div>Source: <a href="https://www.cookcountyassessoril.gov/affordable-housing-data-map" target="_blank" rel="noopener">Cook County Assessor's Office</a>. Parcel list as of Feb 3, 2026; locations from the Assessor's AHSAP data map. Projects with pending applications are not included.</div>
+      <div>Municipal boundaries: U.S. Census Bureau TIGERweb incorporated places. Township boundaries: Cook County GIS. Municipalities marked “part” extend beyond Cook County.</div>
+      <div id="unmappedNote"></div>
+    </footer>
+  </aside>
+
+  <div class="mapwrap">
+    <div id="map" role="region" aria-label="Map of AHSAP parcels"></div>
+    <div class="legend" aria-hidden="true">
+      <span style="--c:var(--t35)"><i></i>Tier 35 <em>· 35% AV cut</em></span>
+      <span style="--c:var(--t15)"><i></i>Tier 15 <em>· 25% AV cut</em></span>
+      <span style="--c:var(--tlac)"><i></i>LAC</span>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+const DATA = /*DATA*/;
+(function () {
+  const TIERS = [
+    { key: '35', name: 'Tier 35', v: '--t35', desc: '35% assessed value reduction. 35% or more of units rent at or below 60% AMI.' },
+    { key: '15', name: 'Tier 15', v: '--t15', desc: '25% assessed value reduction. 15–34% of units rent at or below 60% AMI.' },
+    { key: 'LAC', name: 'LAC', v: '--tlac', desc: 'Listed as “LAC” in the Assessor’s parcel list.' },
+  ];
+  const YEARS = [...new Set(DATA.parcels.map(a => a[4]))].sort();
+  const CHI = new Set(['West Chicago','South Chicago','North Chicago','Hyde Park','Lake','Lake View','Jefferson','Rogers Park']);
+  // parcels: [lat, lon, pin, tier, year, projIdx, twpIdx, oldPins[], note]
+  const P = DATA.parcels.map(a => ({ lat: a[0], lon: a[1], pin: a[2], tier: a[3], year: a[4], proj: DATA.projects[a[5]], pi: a[5], twp: DATA.townships[a[6]], old: a[7], note: a[8], mi: a[9] }));
+  const muniName = i => i >= 0 ? DATA.munis[i] : 'Unincorporated';
+  const projCount = {};
+  P.forEach(p => { projCount[p.pi] = (projCount[p.pi] || 0) + 1; });
+
+  const state = { tiers: new Set(TIERS.map(t => t.key)), years: new Set(YEARS), twp: '', muni: null, mode: 'parcel', hlProj: null };
+  const fmtPin = s => s.replace(/^(\d{2})(\d{2})(\d{3})(\d{3})(\d{4})$/, '$1-$2-$3-$4-$5');
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const tierOf = k => TIERS.find(t => t.key === k);
+  let colors = {};
+  const readColors = () => { colors = { '35': css('--t35'), '15': css('--t15'), 'LAC': css('--tlac'), hl: css('--hl'), panel: css('--panel') }; };
+  readColors();
+
+  // Map
+  const map = L.map('map', { zoomSnap: 0.25, minZoom: 8, maxZoom: 18, preferCanvas: false, attributionControl: true });
+  map.attributionControl.setPrefix(false).addAttribution('Boundaries: Cook County GIS, U.S. Census Bureau');
+  // CARTO basemap: Positron in light theme, Dark Matter in dark. Lock this key to your domains in CARTO's dashboard.
+  // If tiles can't load (e.g. a sandbox that blocks outside images), the vector boundaries stay filled as the basemap.
+  const CARTO_KEY = 'cb1_3nq3_5_bbfe1829675cfa977123f376';
+  const isDark = () => css('--bg').toLowerCase() === '#111715';
+  const tileUrl = () => 'https://basemaps.cartocdn.com/rastertiles/' + (isDark() ? 'dark_all' : 'light_all') + '/{z}/{x}/{y}{r}.png?key=' + CARTO_KEY;
+  const tiles = L.tileLayer(tileUrl(), {
+    maxNativeZoom: 18, maxZoom: 20,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>'
+  }).addTo(map);
+  tiles.once('tileload', () => map.getContainer().classList.add('has-tiles'));
+  const svg = L.svg({ padding: 0.5 });
+  map.createPane('points').style.zIndex = 450;
+  const canvas = L.canvas({ padding: 0.5, tolerance: 4, pane: 'points' });
+
+  const twpLayers = {};
+  const twpLayer = L.geoJSON(DATA.twpGeo, {
+    renderer: svg,
+    style: f => ({ className: 'twp' + (CHI.has(f.properties.name) ? ' chi' : '') }),
+    onEachFeature: (f, layer) => {
+      twpLayers[f.properties.name] = layer;
+      layer.on('click', () => { if (state.twp !== f.properties.name) setTwp(f.properties.name, true); });
+    }
+  });
+  const countyBounds = twpLayer.getBounds();
+  map.fitBounds(countyBounds, { padding: [10, 10] });
+  map.setMaxBounds(countyBounds.pad(0.4));
+  twpLayer.addTo(map);
+  // Municipalities: shaded by total AHSAP parcels (quantile-ish fixed breaks)
+  const BREAKS = [1, 5, 10, 25, 100];
+  const qClass = n => 'q' + BREAKS.filter(b => n >= b).length;
+  const muniLayers = {};
+  L.geoJSON(DATA.muniGeo, {
+    renderer: svg,
+    style: f => ({ className: 'muni ' + qClass(f.properties.parcels) }),
+    onEachFeature: (f, layer) => {
+      const pr = f.properties; muniLayers[pr.i] = layer;
+      layer.bindTooltip(() => {
+        const n = P.filter(p => p.mi === pr.i && passes(p, true)).length;
+        return '<b>' + esc(pr.name) + '</b>' + (pr.partly ? ' <span style="color:var(--muted)">(part in Cook)</span>' : '') +
+          '<br>' + n.toLocaleString() + (n === 1 ? ' parcel' : ' parcels') + (n !== pr.parcels ? ' shown · ' + pr.parcels + ' total' : '');
+      }, { sticky: true, direction: 'right', offset: [12, 0] });
+      layer.on('click', () => setMuni(state.muni === pr.i ? null : pr.i, true));
+    }
+  }).addTo(map);
+  document.getElementById('mlegend').innerHTML = 'Parcels per municipality: ' +
+    [[0, '0'], [.07, '1–4'], [.15, '5–9'], [.25, '10–24'], [.36, '25–99'], [.48, '100+']].map(([o, l]) => '<i style="--o:' + o + '"></i>' + l).join(' ');
+  const labels = L.layerGroup(DATA.twpGeo.features.map(f => L.marker([f.properties.cy, f.properties.cx], {
+    interactive: false, keyboard: false,
+    icon: L.divIcon({ className: '', html: '<div class="twp-label">' + esc(f.properties.name) + '</div>', iconSize: [120, 14], iconAnchor: [60, 7] })
+  }))).addTo(map);
+  const syncLabels = () => map.getContainer().classList.toggle('map-hidden-labels', map.getZoom() < 10);
+  map.on('zoomend', syncLabels); syncLabels();
+
+  const pointLayer = L.layerGroup().addTo(map);
+
+  // ignoreMuni: apply every filter except the municipality one (for per-municipality counts)
+  function passes(p, ignoreMuni) {
+    return state.tiers.has(p.tier) && state.years.has(p.year) && (!state.twp || p.twp === state.twp) &&
+      (ignoreMuni || state.muni === null || p.mi === state.muni);
+  }
+  function filtered() { return P.filter(p => passes(p, false)); }
+
+  function parcelPopup(p) {
+    const t = tierOf(p.tier);
+    return '<div class="pop"><h3>' + esc(p.proj) + '</h3>' +
+      '<span class="badge" style="--c:var(' + t.v + ')">' + esc(t.name) + '</span>' +
+      '<dl><dt>PIN</dt><dd class="mono">' + fmtPin(p.pin) + '</dd>' +
+      '<dt>Municipality</dt><dd>' + esc(muniName(p.mi)) + '</dd>' +
+      '<dt>Township</dt><dd>' + esc(p.twp) + '</dd>' +
+      '<dt>First year</dt><dd>' + p.year + (p.note ? ' <span style="color:var(--muted)">(' + esc(p.note) + ')</span>' : '') + '</dd>' +
+      '<dt>Project size</dt><dd>' + projCount[p.pi] + (projCount[p.pi] === 1 ? ' parcel' : ' parcels') + '</dd>' +
+      (p.old.length ? '<dt>Former PIN' + (p.old.length > 1 ? 's' : '') + '</dt><dd class="mono">' + p.old.map(fmtPin).join('<br>') + '</dd>' : '') +
+      '</dl><a href="https://www.cookcountyassessoril.gov/pin/' + p.pin + '" target="_blank" rel="noopener">Assessor property page ↗</a>' +
+      (projCount[p.pi] > 1 ? ' · <button class="linkbtn" data-proj="' + p.pi + '">Show whole project</button>' : '') + '</div>';
+  }
+
+  function projectPopup(g) {
+    const t = tierOf(g.tier);
+    const yrs = [...new Set(g.items.map(p => p.year))].sort();
+    return '<div class="pop"><h3>' + esc(g.name) + '</h3>' +
+      '<span class="badge" style="--c:var(' + t.v + ')">' + esc(t.name) + '</span>' +
+      '<dl><dt>Municipality</dt><dd>' + esc(muniName(g.items[0].mi)) + '</dd>' +
+      '<dt>Township</dt><dd>' + esc(g.items[0].twp) + '</dd>' +
+      '<dt>First year</dt><dd>' + yrs.join(', ') + '</dd>' +
+      '<dt>Parcels</dt><dd>' + g.items.length + (g.items.length < projCount[g.pi] ? ' of ' + projCount[g.pi] + ' match filters' : '') + '</dd></dl>' +
+      '<div class="pins">' + g.items.map(p => '<div>' + fmtPin(p.pin) + '</div>').join('') + '</div>' +
+      (g.items.length > 1 ? '<button class="linkbtn" data-proj="' + g.pi + '">Zoom to project</button>' : '<a href="https://www.cookcountyassessoril.gov/pin/' + g.items[0].pin + '" target="_blank" rel="noopener">Assessor property page ↗</a>') + '</div>';
+  }
+
+  let markerByPin = {};
+  function render() {
+    const rows = filtered();
+    pointLayer.clearLayers(); markerByPin = {};
+    const hl = state.hlProj;
+    if (state.mode === 'parcel') {
+      // draw highlighted project last so it sits on top
+      rows.sort((a, b) => (a.pi === hl) - (b.pi === hl));
+      rows.forEach(p => {
+        const on = p.pi === hl;
+        const m = L.circleMarker([p.lat, p.lon], {
+          renderer: canvas, radius: on ? 7 : 4.5, weight: on ? 2.5 : 1,
+          color: on ? colors.hl : colors.panel, fillColor: colors[p.tier], fillOpacity: .9, opacity: 1
+        }).bindPopup(() => parcelPopup(p), { maxWidth: 300 });
+        m.addTo(pointLayer); markerByPin[p.pin] = m;
+      });
+    } else {
+      const groups = new Map();
+      rows.forEach(p => {
+        let g = groups.get(p.pi);
+        if (!g) { g = { pi: p.pi, name: p.proj, items: [], lat: 0, lon: 0, tiers: {} }; groups.set(p.pi, g); }
+        g.items.push(p); g.lat += p.lat; g.lon += p.lon; g.tiers[p.tier] = (g.tiers[p.tier] || 0) + 1;
+      });
+      [...groups.values()].sort((a, b) => b.items.length - a.items.length).forEach(g => {
+        g.tier = Object.entries(g.tiers).sort((a, b) => b[1] - a[1])[0][0];
+        const n = g.items.length, on = g.pi === hl;
+        const m = L.circleMarker([g.lat / n, g.lon / n], {
+          renderer: canvas, radius: 4 + Math.sqrt(n) * 2.2, weight: on ? 2.5 : 1,
+          color: on ? colors.hl : colors.panel, fillColor: colors[g.tier], fillOpacity: .8, opacity: 1
+        }).bindPopup(() => projectPopup(g), { maxWidth: 300 });
+        m.addTo(pointLayer);
+        g.items.forEach(p => { markerByPin[p.pin] = m; });
+      });
+    }
+    document.getElementById('nParcels').textContent = rows.length.toLocaleString();
+    document.getElementById('nProjects').textContent = new Set(rows.map(p => p.pi)).size.toLocaleString();
+    renderCounts();
+    renderMuniTable();
+  }
+
+  // Per-municipality table: respects tier/year/township filters, not the municipality filter itself
+  const mbody = document.getElementById('mbody');
+  function renderMuniTable() {
+    const agg = new Map();
+    P.forEach(p => {
+      if (!passes(p, true)) return;
+      let a = agg.get(p.mi); if (!a) { a = { n: 0, proj: new Set() }; agg.set(p.mi, a); }
+      a.n++; a.proj.add(p.pi);
+    });
+    const rows = [...agg.entries()].sort((a, b) => b[1].n - a[1].n || muniName(a[0]).localeCompare(muniName(b[0])));
+    const max = rows.length ? rows[0][1].n : 1;
+    const partly = i => i >= 0 && DATA.muniGeo.features[i].properties.partly;
+    mbody.innerHTML = rows.length ? rows.map(([i, a]) =>
+      '<tr data-mi="' + i + '"' + (state.muni === i ? ' class="sel"' : '') + ' tabindex="0"><td>' + esc(muniName(i)) +
+      (partly(i) ? ' <span class="partly">part</span>' : '') +
+      '<span class="bar" style="width:' + Math.max(2, a.n / max * 100) + '%"></span></td><td class="num">' + a.n.toLocaleString() +
+      '</td><td class="num">' + a.proj.size.toLocaleString() + '</td></tr>').join('')
+      : '<tr><td colspan="3" style="color:var(--muted)">No parcels match these filters.</td></tr>';
+  }
+  const pickRow = e => { const tr = e.target.closest('tr[data-mi]'); if (tr) { const i = +tr.dataset.mi; setMuni(state.muni === i ? null : i, true); } };
+  mbody.addEventListener('click', pickRow);
+  mbody.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pickRow(e); } });
+
+  // Tier buttons
+  const tierBox = document.getElementById('tiers');
+  TIERS.forEach(t => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'tier'; b.dataset.key = t.key; b.setAttribute('aria-pressed', 'true');
+    b.style.setProperty('--c', 'var(' + t.v + ')');
+    b.innerHTML = '<span class="sw"></span><span class="nm">' + t.name + '</span><span class="ct" data-ct></span><span class="ds">' + t.desc + '</span>';
+    b.addEventListener('click', () => {
+      state.tiers.has(t.key) ? state.tiers.delete(t.key) : state.tiers.add(t.key);
+      b.setAttribute('aria-pressed', state.tiers.has(t.key)); render();
+    });
+    tierBox.appendChild(b);
+  });
+
+  // Year bars
+  const yrBox = document.getElementById('years');
+  YEARS.forEach(y => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'yr'; b.dataset.year = y; b.setAttribute('aria-pressed', 'true');
+    b.innerHTML = '<span class="bar"><i></i></span><span class="lb">' + y + '</span><span class="n" data-n></span>';
+    b.addEventListener('click', () => {
+      // first click on a full set isolates that year; later clicks toggle
+      if (state.years.size === YEARS.length) { state.years = new Set([y]); }
+      else if (state.years.has(y)) { state.years.delete(y); if (!state.years.size) state.years = new Set(YEARS); }
+      else state.years.add(y);
+      syncYears(); render();
+    });
+    yrBox.appendChild(b);
+  });
+  document.getElementById('yrAll').addEventListener('click', () => { state.years = new Set(YEARS); syncYears(); render(); });
+  function syncYears() { yrBox.querySelectorAll('.yr').forEach(b => b.setAttribute('aria-pressed', state.years.has(+b.dataset.year))); }
+
+  function renderCounts() {
+    // tier counts respect year + area filters; year counts respect tier + area filters
+    const base = P.filter(p => (!state.twp || p.twp === state.twp) && (state.muni === null || p.mi === state.muni));
+    tierBox.querySelectorAll('.tier').forEach(b => {
+      b.querySelector('[data-ct]').textContent = base.filter(p => p.tier === b.dataset.key && state.years.has(p.year)).length.toLocaleString();
+    });
+    const yc = YEARS.map(y => base.filter(p => p.year === y && state.tiers.has(p.tier)).length);
+    const max = Math.max(1, ...yc);
+    yrBox.querySelectorAll('.yr').forEach((b, i) => {
+      b.querySelector('i').style.height = (yc[i] / max * 100) + '%';
+      b.querySelector('[data-n]').textContent = yc[i].toLocaleString();
+      b.setAttribute('aria-label', YEARS[i] + ': ' + yc[i] + ' parcels');
+    });
+  }
+
+  // Township select
+  const sel = document.getElementById('twp');
+  const twpCounts = {}; P.forEach(p => { twpCounts[p.twp] = (twpCounts[p.twp] || 0) + 1; });
+  DATA.townships.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t + ' (' + twpCounts[t] + ')'; sel.appendChild(o); });
+  sel.addEventListener('change', () => setTwp(sel.value, true));
+  function setTwp(name, zoom) {
+    if (state.twp && twpLayers[state.twp]) twpLayers[state.twp].getElement()?.classList.remove('sel');
+    state.twp = name; sel.value = name;
+    if (name && twpLayers[name]) {
+      twpLayers[name].getElement()?.classList.add('sel');
+      twpLayers[name].bringToFront();
+      if (zoom) map.flyToBounds(twpLayers[name].getBounds(), { padding: [20, 20], duration: .6 });
+    } else if (zoom) map.flyToBounds(countyBounds, { padding: [10, 10], duration: .6 });
+    render();
+  }
+
+  // Municipality select + boundary mode
+  const msel = document.getElementById('muni');
+  const muniTotals = {}; P.forEach(p => { muniTotals[p.mi] = (muniTotals[p.mi] || 0) + 1; });
+  DATA.munis.map((n, i) => [n, i]).sort((a, b) => a[0].localeCompare(b[0])).forEach(([n, i]) => {
+    const o = document.createElement('option'); o.value = i; o.textContent = n + ' (' + (muniTotals[i] || 0) + ')'; msel.appendChild(o);
+  });
+  if (muniTotals[-1]) { const o = document.createElement('option'); o.value = -1; o.textContent = 'Unincorporated (' + muniTotals[-1] + ')'; msel.appendChild(o); }
+  msel.addEventListener('change', () => setMuni(msel.value === '' ? null : +msel.value, true));
+  function setMuni(i, zoom) {
+    if (state.muni !== null && muniLayers[state.muni]) muniLayers[state.muni].getElement()?.classList.remove('sel');
+    state.muni = i; msel.value = i === null ? '' : String(i);
+    const lyr = i !== null && i >= 0 ? muniLayers[i] : null;
+    if (lyr) {
+      lyr.getElement()?.classList.add('sel'); lyr.bringToFront();
+      if (zoom) map.flyToBounds(lyr.getBounds(), { padding: [20, 20], duration: .6 });
+    } else if (zoom && i === null) map.flyToBounds(state.twp && twpLayers[state.twp] ? twpLayers[state.twp].getBounds() : countyBounds, { padding: [10, 10], duration: .6 });
+    render();
+  }
+  const bT = document.getElementById('bTwp'), bM = document.getElementById('bMuni');
+  const setBounds = m => {
+    map.getContainer().classList.toggle('bmode-muni', m === 'muni');
+    bT.setAttribute('aria-pressed', m === 'twp'); bM.setAttribute('aria-pressed', m === 'muni');
+    document.getElementById('mlegend').hidden = m !== 'muni';
+  };
+  bT.addEventListener('click', () => setBounds('twp'));
+  bM.addEventListener('click', () => setBounds('muni'));
+  setBounds('muni');
+
+  // Search
+  const q = document.getElementById('q'), results = document.getElementById('results');
+  const projIndex = DATA.projects.map((name, pi) => ({ name, pi, lc: name.toLowerCase(), items: P.filter(p => p.pi === pi) }));
+  q.addEventListener('input', () => {
+    const v = q.value.trim().toLowerCase(), digits = v.replace(/\D/g, '');
+    results.innerHTML = '';
+    if (v.length < 2) return;
+    let hits;
+    if (digits.length >= 6 && /^[\d\s-]+$/.test(v)) {
+      hits = P.filter(p => p.pin.startsWith(digits) || p.old.some(o => o.startsWith(digits))).slice(0, 8)
+        .map(p => ({ label: fmtPin(p.pin), sub: p.proj, go: () => focusPin(p) }));
+    } else {
+      hits = projIndex.filter(x => x.lc.includes(v)).slice(0, 8)
+        .map(x => ({ label: x.name, sub: x.items.length + (x.items.length === 1 ? ' PIN' : ' PINs'), go: () => focusProject(x.pi) }));
+    }
+    if (!hits.length) { results.innerHTML = '<li><button type="button" disabled>No matches</button></li>'; return; }
+    hits.forEach(h => {
+      const li = document.createElement('li'), b = document.createElement('button');
+      b.type = 'button'; b.innerHTML = '<span>' + esc(h.label) + '</span><small>' + esc(h.sub) + '</small>';
+      b.addEventListener('click', () => { h.go(); results.innerHTML = ''; });
+      li.appendChild(b); results.appendChild(li);
+    });
+  });
+
+  function clearFiltersFor(items) {
+    // make sure the target is visible under current filters
+    let changed = false;
+    items.forEach(p => {
+      if (!state.tiers.has(p.tier)) { state.tiers.add(p.tier); changed = true; }
+      if (!state.years.has(p.year)) { state.years.add(p.year); changed = true; }
+    });
+    if (state.twp && items.some(p => p.twp !== state.twp)) { setTwp('', false); }
+    if (state.muni !== null && items.some(p => p.mi !== state.muni)) { setMuni(null, false); }
+    if (changed) { tierBox.querySelectorAll('.tier').forEach(b => b.setAttribute('aria-pressed', state.tiers.has(b.dataset.key))); syncYears(); }
+  }
+  function focusProject(pi) {
+    const items = P.filter(p => p.pi === pi);
+    clearFiltersFor(items);
+    state.hlProj = pi; render();
+    const b = L.latLngBounds(items.map(p => [p.lat, p.lon]));
+    map.flyToBounds(b, { maxZoom: 17, padding: [60, 60], duration: .7 });
+    map.once('moveend', () => markerByPin[items[0].pin]?.openPopup());
+  }
+  function focusPin(p) {
+    clearFiltersFor([p]);
+    state.hlProj = p.pi; render();
+    map.flyTo([p.lat, p.lon], 17, { duration: .7 });
+    map.once('moveend', () => markerByPin[p.pin]?.openPopup());
+  }
+  map.on('popupopen', e => {
+    e.popup.getElement().querySelectorAll('[data-proj]').forEach(b => b.addEventListener('click', () => focusProject(+b.dataset.proj)));
+  });
+
+  // Mode toggle
+  const mP = document.getElementById('modeParcel'), mJ = document.getElementById('modeProject');
+  const setMode = m => { state.mode = m; mP.setAttribute('aria-pressed', m === 'parcel'); mJ.setAttribute('aria-pressed', m === 'project'); map.closePopup(); render(); };
+  mP.addEventListener('click', () => setMode('parcel'));
+  mJ.addEventListener('click', () => setMode('project'));
+
+  document.getElementById('unmappedNote').textContent = DATA.unmapped + ' listed parcels have no map location and are not shown (mostly recently divided PINs).';
+
+  // Re-color canvas points when the theme flips
+  const retheme = () => { readColors(); tiles.setUrl(tileUrl()); render(); };
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', retheme);
+  new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  render();
+  window.addEventListener('resize', () => map.invalidateSize());
+})();
+</script>

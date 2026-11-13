@@ -1,0 +1,133 @@
+municipality,census_name,geoid,parcels,projects,tier_35_parcels,tier_15_parcels,lac_parcels,entirely_in_cook
+Chicago,Chicago city,1714000,2101,1018,1762,308,31,partly
+Riverdale,Riverdale village,1764278,59,27,58,1,0,yes
+Calumet City,Calumet City city,1710487,46,17,28,18,0,yes
+Evanston,Evanston city,1724582,28,10,21,7,0,yes
+Broadview,Broadview village,1708446,16,3,14,2,0,yes
+Lansing,Lansing village,1742028,15,10,6,9,0,yes
+Cicero,Cicero town,1714351,12,11,8,4,0,yes
+Matteson,Matteson village,1747540,12,5,10,2,0,yes
+Richton Park,Richton Park village,1763706,11,4,11,0,0,yes
+Maywood,Maywood village,1747774,10,6,5,5,0,yes
+Alsip,Alsip village,1701010,9,3,0,9,0,yes
+Blue Island,Blue Island city,1706704,9,1,9,0,0,yes
+Dolton,Dolton village,1720292,9,5,5,4,0,yes
+Posen,Posen village,1761314,7,1,7,0,0,yes
+Berwyn,Berwyn city,1705573,6,4,5,1,0,yes
+Burnham,Burnham village,1709798,6,6,6,0,0,yes
+Justice,Justice village,1738830,6,3,3,3,0,yes
+Oak Park,Oak Park village,1754885,6,3,3,3,0,yes
+Park Forest,Park Forest village,1757732,6,2,6,0,0,partly
+Robbins,Robbins village,1764616,6,2,6,0,0,yes
+Hillside,Hillside village,1735086,5,2,5,0,0,yes
+Melrose Park,Melrose Park village,1748242,5,4,2,3,0,yes
+Palatine,Palatine village,1757225,5,4,4,1,0,yes
+Chicago Heights,Chicago Heights city,1714026,4,4,4,0,0,yes
+Harvey,Harvey city,1733383,4,2,4,0,0,yes
+Mount Prospect,Mount Prospect village,1751089,4,3,4,0,0,yes
+Phoenix,Phoenix village,1759572,4,1,0,4,0,yes
+Bartlett,Bartlett village,1704013,3,2,3,0,0,partly
+Bellwood,Bellwood village,1704975,3,2,3,0,0,yes
+Hickory Hills,Hickory Hills city,1734514,3,1,3,0,0,yes
+Arlington Heights,Arlington Heights village,1702154,2,2,2,0,0,yes
+Chicago Ridge,Chicago Ridge village,1714065,2,2,1,1,0,yes
+Country Club Hills,Country Club Hills city,1716691,2,2,1,1,0,yes
+Crestwood,Crestwood village,1717497,2,1,0,2,0,yes
+Forest Park,Forest Park village,1726935,2,1,2,0,0,yes
+Franklin Park,Franklin Park village,1727702,2,1,0,2,0,yes
+Oak Forest,Oak Forest city,1754638,2,1,2,0,0,yes
+Oak Lawn,Oak Lawn village,1754820,2,2,1,1,0,yes
+Skokie,Skokie village,1770122,2,1,2,0,0,yes
+Wilmette,Wilmette village,1782075,2,2,2,0,0,yes
+Worth,Worth village,1783518,2,2,2,0,0,yes
+Barrington,Barrington village,1703844,1,1,0,1,0,partly
+Berkeley,Berkeley village,1705404,1,1,0,1,0,yes
+Calumet Park,Calumet Park village,1710513,1,1,1,0,0,yes
+Elk Grove Village,Elk Grove Village village,1723256,1,1,1,0,0,partly
+Glenview,Glenview village,1729938,1,1,1,0,0,yes
+Harwood Heights,Harwood Heights village,1733435,1,1,0,1,0,yes
+Homewood,Homewood village,1735879,1,1,0,1,0,yes
+Lyons,Lyons village,1745434,1,1,0,1,0,yes
+Merrionette Park,Merrionette Park village,1748554,1,1,1,0,0,yes
+Orland Park,Orland Park village,1756640,1,1,1,0,0,partly
+Palos Hills,Palos Hills city,1757394,1,1,0,1,0,yes
+Wheeling,Wheeling village,1781087,1,1,1,0,0,yes
+Barrington Hills,Barrington Hills village,1703883,0,0,0,0,0,partly
+Bedford Park,Bedford Park village,1704572,0,0,0,0,0,yes
+Bensenville,Bensenville village,1705248,0,0,0,0,0,partly
+Bridgeview,Bridgeview village,1708225,0,0,0,0,0,yes
+Brookfield,Brookfield village,1708576,0,0,0,0,0,yes
+Buffalo Grove,Buffalo Grove village,1709447,0,0,0,0,0,partly
+Burbank,Burbank city,1709642,0,0,0,0,0,yes
+Burr Ridge,Burr Ridge village,1709980,0,0,0,0,0,partly
+Countryside,Countryside city,1716873,0,0,0,0,0,yes
+Deerfield,Deerfield village,1718992,0,0,0,0,0,partly
+Des Plaines,Des Plaines city,1719642,0,0,0,0,0,yes
+Dixmoor,Dixmoor village,1720149,0,0,0,0,0,yes
+East Dundee,East Dundee village,1721696,0,0,0,0,0,partly
+East Hazel Crest,East Hazel Crest village,1721904,0,0,0,0,0,yes
+Elgin,Elgin city,1723074,0,0,0,0,0,partly
+Elmwood Park,Elmwood Park village,1723724,0,0,0,0,0,yes
+Evergreen Park,Evergreen Park village,1724634,0,0,0,0,0,yes
+Flossmoor,Flossmoor village,1726571,0,0,0,0,0,yes
+Ford Heights,Ford Heights village,1726710,0,0,0,0,0,yes
+Forest View,Forest View village,1726987,0,0,0,0,0,yes
+Frankfort,Frankfort village,1727624,0,0,0,0,0,partly
+Glencoe,Glencoe village,1729652,0,0,0,0,0,yes
+Glenwood,Glenwood village,1730029,0,0,0,0,0,yes
+Golf,Golf village,1730328,0,0,0,0,0,yes
+Hanover Park,Hanover Park village,1732746,0,0,0,0,0,partly
+Hazel Crest,Hazel Crest village,1733695,0,0,0,0,0,yes
+Hinsdale,Hinsdale village,1735307,0,0,0,0,0,partly
+Hodgkins,Hodgkins village,1735385,0,0,0,0,0,yes
+Hoffman Estates,Hoffman Estates village,1735411,0,0,0,0,0,yes
+Hometown,Hometown city,1735866,0,0,0,0,0,yes
+Indian Head Park,Indian Head Park village,1737257,0,0,0,0,0,yes
+Inverness,Inverness village,1737608,0,0,0,0,0,yes
+Kenilworth,Kenilworth village,1739519,0,0,0,0,0,yes
+La Grange,La Grange village,1740767,0,0,0,0,0,yes
+La Grange Park,La Grange Park village,1740793,0,0,0,0,0,yes
+Lemont,Lemont village,1742795,0,0,0,0,0,partly
+Lincolnwood,Lincolnwood village,1743744,0,0,0,0,0,yes
+Lynwood,Lynwood village,1745421,0,0,0,0,0,yes
+Markham,Markham city,1747007,0,0,0,0,0,yes
+McCook,McCook village,1745564,0,0,0,0,0,yes
+Midlothian,Midlothian village,1748892,0,0,0,0,0,yes
+Morton Grove,Morton Grove village,1750647,0,0,0,0,0,yes
+Niles,Niles village,1753000,0,0,0,0,0,yes
+Norridge,Norridge village,1753377,0,0,0,0,0,yes
+North Riverside,North Riverside village,1754144,0,0,0,0,0,yes
+Northbrook,Northbrook village,1753481,0,0,0,0,0,yes
+Northfield,Northfield village,1753663,0,0,0,0,0,yes
+Northlake,Northlake city,1753871,0,0,0,0,0,yes
+Olympia Fields,Olympia Fields village,1755938,0,0,0,0,0,yes
+Orland Hills,Orland Hills village,1756627,0,0,0,0,0,yes
+Palos Heights,Palos Heights city,1757381,0,0,0,0,0,yes
+Palos Park,Palos Park village,1757407,0,0,0,0,0,yes
+Park Ridge,Park Ridge city,1757875,0,0,0,0,0,yes
+Prospect Heights,Prospect Heights city,1762016,0,0,0,0,0,yes
+River Forest,River Forest village,1764304,0,0,0,0,0,yes
+River Grove,River Grove village,1764343,0,0,0,0,0,yes
+Riverside,Riverside village,1764421,0,0,0,0,0,yes
+Rolling Meadows,Rolling Meadows city,1765338,0,0,0,0,0,yes
+Roselle,Roselle village,1765806,0,0,0,0,0,partly
+Rosemont,Rosemont village,1765819,0,0,0,0,0,yes
+Sauk Village,Sauk Village village,1767769,0,0,0,0,0,yes
+Schaumburg,Schaumburg village,1768003,0,0,0,0,0,yes
+Schiller Park,Schiller Park village,1768081,0,0,0,0,0,yes
+South Barrington,South Barrington village,1770564,0,0,0,0,0,yes
+South Chicago Heights,South Chicago Heights village,1770629,0,0,0,0,0,yes
+South Holland,South Holland village,1770850,0,0,0,0,0,yes
+Steger,Steger village,1772520,0,0,0,0,0,partly
+Stickney,Stickney village,1772676,0,0,0,0,0,yes
+Stone Park,Stone Park village,1772923,0,0,0,0,0,yes
+Streamwood,Streamwood village,1773157,0,0,0,0,0,yes
+Summit,Summit village,1773638,0,0,0,0,0,yes
+Thornton,Thornton village,1775185,0,0,0,0,0,yes
+Tinley Park,Tinley Park village,1775484,0,0,0,0,0,partly
+University Park,University Park village,1776935,0,0,0,0,0,partly
+Westchester,Westchester village,1780047,0,0,0,0,0,yes
+Western Springs,Western Springs village,1780242,0,0,0,0,0,yes
+Willow Springs,Willow Springs village,1782049,0,0,0,0,0,yes
+Winnetka,Winnetka village,1782530,0,0,0,0,0,yes
+Unincorporated Cook County,,,0,0,0,0,0,

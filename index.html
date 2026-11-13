@@ -1,0 +1,62 @@
+---
+layout: default
+---
+<div class="app">
+  <aside class="ledger" aria-label="Filters and summary">
+    <header>
+      <h1>Affordable Housing Special Assessment Parcels</h1>
+      <p class="lede">Rental properties receiving an assessment reduction in exchange for keeping units affordable at or below 60% of Area Median Income.</p>
+    </header>
+
+    <section class="field">
+      <label for="q"><h2 style="margin:0">Find a project or PIN</h2></label>
+      <input id="q" type="search" placeholder="e.g. Carriage Creek or 31-34-200-028" autocomplete="off">
+      <ul class="results" id="results"></ul>
+    </section>
+
+    <section class="field">
+      <select id="muni" aria-label="Municipality"><option value="">All municipalities</option></select>
+    </section>
+
+    <section>
+      <h2>Incentive tier</h2>
+      <div class="tiers" id="tiers"></div>
+      <p class="tiernote">AV = assessed value. AMI = Area Median Income. For details on the LAC graduated benefit, see the <a href="https://www.cookcountyassessoril.gov/affordable-housing-data-map" target="_blank" rel="noopener">Assessor's AHSAP FAQs</a>.</p>
+    </section>
+
+    <section>
+      <div class="row"><h2 style="margin:0">First year in program</h2><button class="linkbtn" id="yrAll" type="button">All years</button></div>
+      <div class="years" id="years" style="margin-top:10px"></div>
+    </section>
+
+    <section class="field">
+      <h2 style="margin:0">By municipality</h2>
+      <div class="mlegend" id="mlegend" aria-hidden="true"></div>
+      <div class="mtable-wrap">
+        <table class="mtable" aria-label="AHSAP parcels by municipality">
+          <thead><tr><th>Municipality</th><th class="num">Parcels</th><th class="num">Projects</th></tr></thead>
+          <tbody id="mbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer class="foot">
+      <div>Source: <a href="https://www.cookcountyassessoril.gov/affordable-housing-data-map" target="_blank" rel="noopener">Cook County Assessor's Office</a>. Parcel list as of Feb 3, 2026; locations from the Assessor's AHSAP data map. Projects with pending applications are not included.</div>
+      <div>Municipal boundaries: U.S. Census Bureau TIGERweb incorporated places. Municipalities marked “part” extend beyond Cook County.</div>
+      <div id="unmappedNote"></div>
+    </footer>
+  </aside>
+
+  <div class="mapwrap">
+    <div id="map" role="region" aria-label="Map of AHSAP parcels"></div>
+    <div class="legend" aria-hidden="true">
+      <span style="--c:var(--t15)"><i></i>Tier 15 <em>· 25% AV cut</em></span>
+      <span style="--c:var(--t35)"><i></i>Tier 35 <em>· 35% AV cut</em></span>
+      <span style="--c:var(--tlac)"><i></i>LAC <em>· new development</em></span>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>window.AHSAP_DATA_URL = "{{ '/assets/data/ahsap.json' | relative_url }}";</script>
+<script src="{{ '/assets/js/map.js' | relative_url }}"></script>
