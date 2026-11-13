@@ -5,10 +5,10 @@ url: ""
 
 exclude:
   - build/
+  - data/
   - Gemfile
   - Gemfile.lock
   - README.md
-  - ahsap-map.html
   - vendor/
   - Dockerfile
   - docker-compose.yml

@@ -21,6 +21,7 @@ Pushing to `main` builds and deploys the site to GitHub Pages via [.github/workf
 - `assets/css/map.css`, `assets/js/map.js`: styles and map logic
 - `assets/data/ahsap.json`: parcels, projects, and township/municipality boundaries, loaded by `map.js`
 - `build/`: Python data pipeline (not published)
+- `data/`: source spreadsheet (`ahsap_as_of_02_03_26.xlsx`) and derived CSV/GeoJSON exports (not published)
 
 ## Updating the data
 
@@ -34,3 +35,10 @@ Pushing to `main` builds and deploys the site to GitHub Pages via [.github/workf
    ```
 
    Community area boundaries come from the City of Chicago Data Portal (dataset `igwz-8jzy`).
+4. Add property characteristics (class, year built, building and land square footage) from the Cook County Assessor's open data:
+
+   ```sh
+   python3 build/characteristics.py assets/data/ahsap.json assets/data/ahsap.json
+   ```
+
+   Downloads are cached in `build/inputs/characteristics_cache/` (git-ignored); delete it to pull fresh data.

@@ -12,13 +12,14 @@ fetch(window.AHSAP_DATA_URL).then(r => r.json()).then(function (DATA) {
       term: '30-year commitment.' },
   ];
   const YEARS = [...new Set(DATA.parcels.map(a => a[4]))].sort();
-  // parcels: [lat, lon, pin, tier, year, projIdx, twpIdx, oldPins[], note]
-  const P = DATA.parcels.map(a => ({ lat: a[0], lon: a[1], pin: a[2], tier: a[3], year: a[4], proj: DATA.projects[a[5]], pi: a[5], twp: DATA.townships[a[6]], old: a[7], note: a[8], mi: a[9] }));
+  // parcels: [lat, lon, pin, tier, year, projIdx, twpIdx, oldPins[], note, areaIdx, chars]
+  // chars: [class, yearBuilt, bldgSf, landSf, sourceId] from Cook County Assessor open data (see build/characteristics.py)
+  const P = DATA.parcels.map(a => ({ lat: a[0], lon: a[1], pin: a[2], tier: a[3], year: a[4], proj: DATA.projects[a[5]], pi: a[5], twp: DATA.townships[a[6]], old: a[7], note: a[8], mi: a[9], ch: a[10] }));
   const muniName = i => i >= 0 ? DATA.munis[i] : 'Unincorporated';
   // Chicago is split into its 77 community areas; those areas carry properties.ca in muniGeo
   const isCA = i => i >= 0 && !!DATA.muniGeo.features[i].properties.ca;
-  const projCount = {}, projFirstPin = {};
-  P.forEach(p => { projCount[p.pi] = (projCount[p.pi] || 0) + 1; if (!(p.pi in projFirstPin)) projFirstPin[p.pi] = p.pin; });
+  const projFirstPin = {};
+  P.forEach(p => { if (!(p.pi in projFirstPin)) projFirstPin[p.pi] = p.pin; });
 
   const state = { tiers: new Set(TIERS.map(t => t.key)), years: new Set(YEARS), muni: null, hlProj: null };
   const fmtPin = s => s.replace(/^(\d{2})(\d{2})(\d{3})(\d{3})(\d{4})$/, '$1-$2-$3-$4-$5');
@@ -82,16 +83,41 @@ fetch(window.AHSAP_DATA_URL).then(r => r.json()).then(function (DATA) {
   }
   function filtered() { return P.filter(p => passes(p, false)); }
 
+  // Assessor parcel photo, loaded from the Assessor's site by a fixed URL pattern per PIN. Not every PIN has one, so the
+  // popup falls back through the project's next few PINs, then removes the image. Space for the image is reserved up
+  // front so the popup never needs popup.update(), which would rebuild its content.
+  const photoUrl = pin => 'https://prodassets.cookcountyassessoril.gov/s3fs-public/pin_detail/' + pin.slice(0, 3) + '-' + pin.slice(3, 5) + '/' + pin.slice(5, 8) + '/' + pin + '_AA.jpg';
+  const fmtNum = n => Math.round(n).toLocaleString();
+  const shortDesc = d => { d = d.split(' (')[0]; return d.length > 120 ? d.slice(0, 117).replace(/[ ,]+\S*$/, '') + '…' : d; };
+  const THIS_YEAR = new Date().getFullYear();
+  function charsHtml(items, extra) {
+    const withCh = items.filter(p => p.ch);
+    if (!withCh.length) return '<dl>' + extra + '</dl>';
+    // a commercial record can cover several PINs: count each record's numbers once
+    const recs = [...new Map(withCh.filter(p => p.ch[4]).map(p => [p.ch[4], p.ch])).values()];
+    const counts = {}; withCh.forEach(p => { if (p.ch[0]) counts[p.ch[0]] = (counts[p.ch[0]] || 0) + 1; });
+    const codes = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+    const desc = codes.length ? esc(shortDesc(DATA.classes[codes[0]] || 'Class ' + codes[0])) + ' <span class="muted">(class ' + codes[0] + ')</span>' +
+      (codes.length > 1 ? ' <span class="muted">+ ' + (codes.length - 1) + ' other class' + (codes.length > 2 ? 'es' : '') + '</span>' : '') : '';
+    const yrs = recs.map(c => c[1]).filter(Boolean), lo = Math.min(...yrs), hi = Math.max(...yrs);
+    const age = !yrs.length ? '' : lo === hi ? (THIS_YEAR - lo) + ' years <span class="muted">(built ' + lo + ')</span>'
+      : (THIS_YEAR - hi) + '–' + (THIS_YEAR - lo) + ' years <span class="muted">(built ' + lo + '–' + hi + ')</span>';
+    const sum = k => { const v = recs.map(c => c[k]).filter(Boolean); return v.length ? fmtNum(v.reduce((a, b) => a + b, 0)) : ''; };
+    const bsf = sum(2), lsf = sum(3);
+    const row = (k, v) => v ? '<dt>' + k + '</dt><dd>' + v + '</dd>' : '';
+    return '<h4>Characteristics' + (items.length > 1 ? ' <span class="muted">· totals for ' + items.length + ' parcels</span>' : '') + '</h4>' +
+      '<dl>' + row('Description', desc) + row('Age', age) + row('Building sq ft', bsf) + row('Land sq ft', lsf) + extra + '</dl>';
+  }
+
   function projectPopup(g) {
     const t = tierOf(g.tier);
     const yrs = [...new Set(g.items.map(p => p.year))].sort();
-    return '<div class="pop"><h3>' + esc(g.name) + '</h3>' +
+    const photoPins = g.items.slice(0, 4).map(p => p.pin);
+    const ca = isCA(g.items[0].mi);
+    return '<div class="pop"><img class="photo" alt="" referrerpolicy="no-referrer" src="' + photoUrl(photoPins[0]) + '" data-next="' + photoPins.slice(1).join(',') + '"><h3>' + esc(g.name) + ', ' + (ca ? 'Chicago' : esc(muniName(g.items[0].mi))) + '</h3>' +
+      (ca ? '<div class="city">' + esc(muniName(g.items[0].mi)) + '</div>' : '') +
       '<span class="badge" style="--c:var(' + t.v + ')">' + esc(t.name) + '</span>' +
-      '<dl><dt>Municipality</dt><dd>' + (isCA(g.items[0].mi) ? 'Chicago' : esc(muniName(g.items[0].mi))) + '</dd>' +
-      (isCA(g.items[0].mi) ? '<dt>Community area</dt><dd>' + esc(muniName(g.items[0].mi)) + '</dd>' : '') +
-      '<dt>Township</dt><dd>' + esc(g.items[0].twp) + '</dd>' +
-      '<dt>First year</dt><dd>' + yrs.join(', ') + '</dd>' +
-      '<dt>Parcels</dt><dd>' + g.items.length + (g.items.length < projCount[g.pi] ? ' of ' + projCount[g.pi] + ' match filters' : '') + '</dd></dl>' +
+      charsHtml(g.items, '<dt>Started AHSAP</dt><dd>' + yrs.join(', ') + '</dd>') +
       '<div class="pins">' + g.items.map(p => '<div><a href="https://www.cookcountyassessoril.gov/pin/' + p.pin + '" target="_blank" rel="noopener">' + fmtPin(p.pin) + '</a></div>').join('') + '</div>' +
       (g.items.length > 1 ? '<button class="linkbtn" data-proj="' + g.pi + '">Zoom to project</button>' : '<a href="https://www.cookcountyassessoril.gov/pin/' + g.items[0].pin + '" target="_blank" rel="noopener">Assessor property page ↗</a>') + '</div>';
   }
@@ -293,10 +319,16 @@ fetch(window.AHSAP_DATA_URL).then(r => r.json()).then(function (DATA) {
     map.once('moveend', () => markerByPin[p.pin]?.openPopup());
   }
   map.on('popupopen', e => {
+    const img = e.popup.getElement().querySelector('img.photo');
+    if (img) {
+      img.addEventListener('error', () => {
+        const next = img.dataset.next ? img.dataset.next.split(',') : [];
+        if (next.length) { img.dataset.next = next.slice(1).join(','); img.src = photoUrl(next[0]); } else img.remove();
+      });
+    }
     e.popup.getElement().querySelectorAll('[data-proj]').forEach(b => b.addEventListener('click', () => focusProject(+b.dataset.proj)));
   });
 
-  document.getElementById('unmappedNote').textContent = DATA.unmapped + ' listed parcels have no map location and are not shown (mostly recently divided PINs).';
 
   // Re-color points when the theme flips
   const retheme = () => { readColors(); tiles.setUrl(tileUrl()); render(); };

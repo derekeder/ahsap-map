@@ -41,8 +41,8 @@ layout: default
 
     <footer class="foot">
       <div>Source: <a href="https://www.cookcountyassessoril.gov/affordable-housing-data-map" target="_blank" rel="noopener">Cook County Assessor's Office</a>. Parcel list as of Feb 3, 2026; locations from the Assessor's AHSAP data map. Projects with pending applications are not included.</div>
-      <div>Municipal boundaries: U.S. Census Bureau TIGERweb incorporated places. Chicago community areas: City of Chicago Data Portal. Municipalities marked “part” extend beyond Cook County.</div>
-      <div id="unmappedNote"></div>
+      <div>Municipal boundaries: U.S. Census Bureau TIGERweb incorporated places. Chicago community areas: City of Chicago Data Portal. Property characteristics and photos: Cook County Assessor (open data portal; photos loaded from the Assessor's site). Municipalities marked “part” extend beyond Cook County.</div>
+      <div>By Derek Eder with some help from Claude.</div>
     </footer>
   </aside>
 
@@ -58,5 +58,7 @@ layout: default
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
-<script>window.AHSAP_DATA_URL = "{{ '/assets/data/ahsap.json' | relative_url }}";</script>
+<script>
+  window.AHSAP_DATA_URL = "{{ '/assets/data/ahsap.json' | relative_url }}";
+</script>
 <script src="{{ '/assets/js/map.js' | relative_url }}"></script>
