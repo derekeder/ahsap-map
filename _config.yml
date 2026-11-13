@@ -1,6 +1,6 @@
 title: Cook County AHSAP Map
 description: Map of Cook County parcels receiving the Affordable Housing Special Assessment Program (AHSAP) reduction.
-baseurl: "" # e.g. "/ahsap-map" when served from a GitHub Pages project site
+baseurl: "" # set automatically by the GitHub Pages workflow
 url: ""
 
 exclude:

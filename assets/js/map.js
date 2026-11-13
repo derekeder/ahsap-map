@@ -15,8 +15,10 @@ fetch(window.AHSAP_DATA_URL).then(r => r.json()).then(function (DATA) {
   // parcels: [lat, lon, pin, tier, year, projIdx, twpIdx, oldPins[], note]
   const P = DATA.parcels.map(a => ({ lat: a[0], lon: a[1], pin: a[2], tier: a[3], year: a[4], proj: DATA.projects[a[5]], pi: a[5], twp: DATA.townships[a[6]], old: a[7], note: a[8], mi: a[9] }));
   const muniName = i => i >= 0 ? DATA.munis[i] : 'Unincorporated';
-  const projCount = {};
-  P.forEach(p => { projCount[p.pi] = (projCount[p.pi] || 0) + 1; });
+  // Chicago is split into its 77 community areas; those areas carry properties.ca in muniGeo
+  const isCA = i => i >= 0 && !!DATA.muniGeo.features[i].properties.ca;
+  const projCount = {}, projFirstPin = {};
+  P.forEach(p => { projCount[p.pi] = (projCount[p.pi] || 0) + 1; if (!(p.pi in projFirstPin)) projFirstPin[p.pi] = p.pin; });
 
   const state = { tiers: new Set(TIERS.map(t => t.key)), years: new Set(YEARS), muni: null, hlProj: null };
   const fmtPin = s => s.replace(/^(\d{2})(\d{2})(\d{3})(\d{3})(\d{4})$/, '$1-$2-$3-$4-$5');
@@ -41,7 +43,8 @@ fetch(window.AHSAP_DATA_URL).then(r => r.json()).then(function (DATA) {
   tiles.once('tileload', () => map.getContainer().classList.add('has-tiles'));
   const svg = L.svg({ padding: 0.5 });
   map.createPane('points').style.zIndex = 450;
-  const canvas = L.canvas({ padding: 0.5, tolerance: 4, pane: 'points' });
+  // SVG (not canvas) so clicks on empty map space fall through to the municipality shapes below
+  const pointRenderer = L.svg({ padding: 0.5, pane: 'points' });
 
   // Municipalities: shaded by total AHSAP parcels (quantile-ish fixed breaks)
   const BREAKS = [1, 5, 10, 25, 100];
@@ -55,18 +58,20 @@ fetch(window.AHSAP_DATA_URL).then(r => r.json()).then(function (DATA) {
       layer.bindTooltip(() => {
         const n = P.filter(p => p.mi === pr.i && passes(p, true)).length;
         return '<b>' + esc(pr.name) + '</b>' + (pr.partly ? ' <span style="color:var(--muted)">(part in Cook)</span>' : '') +
+          (pr.ca ? ' <span style="color:var(--muted)">(Chicago)</span>' : '') +
           '<br>' + n.toLocaleString() + (n === 1 ? ' parcel' : ' parcels') + (n !== pr.parcels ? ' shown · ' + pr.parcels + ' total' : '');
       }, { sticky: true, direction: 'right', offset: [12, 0] });
       layer.on('click', () => setMuni(state.muni === pr.i ? null : pr.i, true));
     }
   }).addTo(map);
+  if (DATA.chicagoOutline) L.geoJSON(DATA.chicagoOutline, { renderer: svg, interactive: false, style: { className: 'city-outline' } }).addTo(map);
   map.getContainer().classList.add('bmode-muni');
   const parcelBounds = items => L.latLngBounds(items.map(p => [p.lat, p.lon]));
   const countyBounds = muniLayer.getBounds().extend(parcelBounds(P));
   map.fitBounds(countyBounds, { padding: [10, 10] });
   map.setMaxBounds(countyBounds.pad(0.4));
-  document.getElementById('mlegend').innerHTML = '<span>Parcels:</span> ' +
-    [[0, '0'], [.07, '1–4'], [.15, '5–9'], [.25, '10–24'], [.36, '25–99'], [.48, '100+']].map(([o, l]) => '<span><i style="--o:' + o + '"></i>' + l + '</span>').join(' ');
+  document.getElementById('mlegend').innerHTML =
+    [[0, '0'], [.07, '1–4'], [.15, '5–9'], [.25, '10–24'], [.36, '25–99'], [.48, '100+']].map(([o, l]) => '<span><i style="--o:' + o + '"></i>' + l + '</span>').join('');
 
   const pointLayer = L.layerGroup().addTo(map);
 
@@ -82,7 +87,8 @@ fetch(window.AHSAP_DATA_URL).then(r => r.json()).then(function (DATA) {
     const yrs = [...new Set(g.items.map(p => p.year))].sort();
     return '<div class="pop"><h3>' + esc(g.name) + '</h3>' +
       '<span class="badge" style="--c:var(' + t.v + ')">' + esc(t.name) + '</span>' +
-      '<dl><dt>Municipality</dt><dd>' + esc(muniName(g.items[0].mi)) + '</dd>' +
+      '<dl><dt>Municipality</dt><dd>' + (isCA(g.items[0].mi) ? 'Chicago' : esc(muniName(g.items[0].mi))) + '</dd>' +
+      (isCA(g.items[0].mi) ? '<dt>Community area</dt><dd>' + esc(muniName(g.items[0].mi)) + '</dd>' : '') +
       '<dt>Township</dt><dd>' + esc(g.items[0].twp) + '</dd>' +
       '<dt>First year</dt><dd>' + yrs.join(', ') + '</dd>' +
       '<dt>Parcels</dt><dd>' + g.items.length + (g.items.length < projCount[g.pi] ? ' of ' + projCount[g.pi] + ' match filters' : '') + '</dd></dl>' +
@@ -105,14 +111,36 @@ fetch(window.AHSAP_DATA_URL).then(r => r.json()).then(function (DATA) {
       g.tier = Object.entries(g.tiers).sort((a, b) => b[1] - a[1])[0][0];
       const n = g.items.length, on = g.pi === hl;
       const m = L.circleMarker([g.lat / n, g.lon / n], {
-        renderer: canvas, radius: 4 + Math.sqrt(n) * 2.2, weight: on ? 2.5 : 1,
+        renderer: pointRenderer, radius: 4 + Math.sqrt(n) * 2.2, weight: on ? 2.5 : 1,
         color: on ? colors.hl : colors.panel, fillColor: colors[g.tier], fillOpacity: .8, opacity: 1
       }).bindPopup(() => projectPopup(g), { maxWidth: 300 });
+      // the open popup's project goes in the URL as ?pin= (the searched PIN, else the project's first PIN)
+      m.on('popupopen', () => { selPin = pendingPin && g.items.some(p => p.pin === pendingPin) ? pendingPin : projFirstPin[g.pi]; pendingPin = null; writeUrl(); });
+      m.on('popupclose', () => { selPin = null; writeUrl(); });
       m.addTo(pointLayer);
       g.items.forEach(p => { markerByPin[p.pin] = m; });
     });
     renderCounts();
     renderMuniTable();
+    writeUrl();
+  }
+
+  // URL state for deep links, e.g. ?tiers=15,35&years=2024&muni=evanston&pin=10-13-412-001-0000&map=13/42.04/-87.69
+  // Defaults are omitted; history.replaceState keeps the URL current without adding back-button entries.
+  const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const muniSlug = i => i === -1 ? 'unincorporated' : (isCA(i) ? 'chicago-' : '') + slug(DATA.munis[i]);
+  let urlReady = false, viewMoved = false, selPin = null, pendingPin = null;
+  function writeUrl() {
+    if (!urlReady) return;
+    const u = new URLSearchParams();
+    if (state.tiers.size !== TIERS.length) u.set('tiers', TIERS.filter(t => state.tiers.has(t.key)).map(t => t.key).join(','));
+    if (state.years.size !== YEARS.length) u.set('years', YEARS.filter(y => state.years.has(y)).join(','));
+    if (state.muni !== null) u.set('muni', muniSlug(state.muni));
+    if (selPin) u.set('pin', fmtPin(selPin));
+    if (viewMoved) { const c = map.getCenter(); u.set('map', +map.getZoom().toFixed(2) + '/' + c.lat.toFixed(5) + '/' + c.lng.toFixed(5)); }
+    const qs = u.toString().replace(/%2C/g, ',').replace(/%2F/g, '/');
+    const next = location.pathname + (qs ? '?' + qs : '') + location.hash;
+    if (next !== location.pathname + location.search + location.hash) history.replaceState(null, '', next);
   }
 
   // Per-municipality table: respects tier/year filters, not the municipality filter itself
@@ -129,7 +157,7 @@ fetch(window.AHSAP_DATA_URL).then(r => r.json()).then(function (DATA) {
     const partly = i => i >= 0 && DATA.muniGeo.features[i].properties.partly;
     mbody.innerHTML = rows.length ? rows.map(([i, a]) =>
       '<tr data-mi="' + i + '"' + (state.muni === i ? ' class="sel"' : '') + ' tabindex="0"><td>' + esc(muniName(i)) +
-      (partly(i) ? ' <span class="partly">part</span>' : '') +
+      (partly(i) ? ' <span class="partly">part</span>' : '') + (isCA(i) ? ' <span class="partly">Chicago</span>' : '') +
       '<span class="bar" style="width:' + Math.max(2, a.n / max * 100) + '%"></span></td><td class="num">' + a.n.toLocaleString() +
       '</td><td class="num">' + a.proj.size.toLocaleString() + '</td></tr>').join('')
       : '<tr><td colspan="3" style="color:var(--muted)">No parcels match these filters.</td></tr>';
@@ -148,10 +176,12 @@ fetch(window.AHSAP_DATA_URL).then(r => r.json()).then(function (DATA) {
       '<span class="ds"><b>' + t.cut + '.</b> ' + t.req + '</span><span class="ds term">' + t.term + '</span>';
     b.addEventListener('click', () => {
       state.tiers.has(t.key) ? state.tiers.delete(t.key) : state.tiers.add(t.key);
-      b.setAttribute('aria-pressed', state.tiers.has(t.key)); render();
+      syncTiers(); render();
     });
     tierBox.appendChild(b);
   });
+
+  function syncTiers() { tierBox.querySelectorAll('.tier').forEach(b => b.setAttribute('aria-pressed', state.tiers.has(b.dataset.key))); }
 
   // Year bars
   const yrBox = document.getElementById('years');
@@ -191,9 +221,15 @@ fetch(window.AHSAP_DATA_URL).then(r => r.json()).then(function (DATA) {
   const msel = document.getElementById('muni');
   const muniProj = {}; P.forEach(p => { (muniProj[p.mi] = muniProj[p.mi] || new Set()).add(p.pi); });
   const muniTotals = {}; Object.keys(muniProj).forEach(k => { muniTotals[k] = muniProj[k].size; });
-  DATA.munis.map((n, i) => [n, i]).sort((a, b) => a[0].localeCompare(b[0])).forEach(([n, i]) => {
-    const o = document.createElement('option'); o.value = i; o.textContent = n + ' (' + (muniTotals[i] || 0) + ')'; msel.appendChild(o);
-  });
+  const addGroup = (label, test) => {
+    const grp = document.createElement('optgroup'); grp.label = label;
+    DATA.munis.map((n, i) => [n, i]).filter(([, i]) => test(i)).sort((a, b) => a[0].localeCompare(b[0])).forEach(([n, i]) => {
+      const o = document.createElement('option'); o.value = i; o.textContent = n + ' (' + (muniTotals[i] || 0) + ')'; grp.appendChild(o);
+    });
+    if (grp.children.length) msel.appendChild(grp);
+  };
+  addGroup('Chicago community areas', i => isCA(i));
+  addGroup('Suburban Cook municipalities', i => !isCA(i));
   if (muniTotals[-1]) { const o = document.createElement('option'); o.value = -1; o.textContent = 'Unincorporated (' + muniTotals[-1] + ')'; msel.appendChild(o); }
   msel.addEventListener('change', () => setMuni(msel.value === '' ? null : +msel.value, true));
   function setMuni(i, zoom) {
@@ -239,7 +275,7 @@ fetch(window.AHSAP_DATA_URL).then(r => r.json()).then(function (DATA) {
       if (!state.years.has(p.year)) { state.years.add(p.year); changed = true; }
     });
     if (state.muni !== null && items.some(p => p.mi !== state.muni)) { setMuni(null, false); }
-    if (changed) { tierBox.querySelectorAll('.tier').forEach(b => b.setAttribute('aria-pressed', state.tiers.has(b.dataset.key))); syncYears(); }
+    if (changed) { syncTiers(); syncYears(); }
   }
   function focusProject(pi) {
     const items = P.filter(p => p.pi === pi);
@@ -251,6 +287,7 @@ fetch(window.AHSAP_DATA_URL).then(r => r.json()).then(function (DATA) {
   }
   function focusPin(p) {
     clearFiltersFor([p]);
+    pendingPin = p.pin;
     state.hlProj = p.pi; render();
     map.flyTo([p.lat, p.lon], 17, { duration: .7 });
     map.once('moveend', () => markerByPin[p.pin]?.openPopup());
@@ -261,11 +298,39 @@ fetch(window.AHSAP_DATA_URL).then(r => r.json()).then(function (DATA) {
 
   document.getElementById('unmappedNote').textContent = DATA.unmapped + ' listed parcels have no map location and are not shown (mostly recently divided PINs).';
 
-  // Re-color canvas points when the theme flips
+  // Re-color points when the theme flips
   const retheme = () => { readColors(); tiles.setUrl(tileUrl()); render(); };
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', retheme);
   new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
+  // Apply state from the URL, then start keeping the URL in sync
+  const u = new URLSearchParams(location.search);
+  const list = k => u.get(k).split(',').map(x => x.trim()).filter(Boolean);
+  if (u.has('tiers')) { state.tiers = new Set(list('tiers').map(k => k.toUpperCase()).filter(k => tierOf(k))); syncTiers(); }
+  if (u.has('years')) { const ys = list('years').map(Number).filter(y => YEARS.includes(y)); state.years = new Set(ys.length ? ys : YEARS); syncYears(); }
+  let startMuni = null;
+  if (u.get('muni')) {
+    const m = slug(u.get('muni')), found = DATA.munis.findIndex((n, i) => muniSlug(i) === m);
+    startMuni = m === 'unincorporated' ? -1 : found >= 0 ? found : null;
+  }
+  if (startMuni !== null) setMuni(startMuni, false);
+  const mv = (u.get('map') || '').split('/').map(Number);
+  const hasView = mv.length === 3 && mv.every(Number.isFinite);
+  if (hasView) map.setView([mv[1], mv[2]], mv[0], { animate: false });
+  else if (startMuni !== null && muniLayers[startMuni]) map.fitBounds(muniLayers[startMuni].getBounds(), { padding: [20, 20] });
   render();
+  const pinArg = (u.get('pin') || '').replace(/\D/g, '');
+  const target = pinArg && (P.find(p => p.pin === pinArg) || P.find(p => p.old.includes(pinArg)));
+  if (target) {
+    clearFiltersFor([target]);
+    state.hlProj = target.pi; render();
+    if (!hasView) map.setView([target.lat, target.lon], 17, { animate: false });
+    pendingPin = target.pin;
+    markerByPin[target.pin]?.openPopup();
+  }
+  viewMoved = hasView;
+  urlReady = true; writeUrl();
+  map.on('moveend', () => { viewMoved = true; writeUrl(); });
+
   window.addEventListener('resize', () => map.invalidateSize());
 });

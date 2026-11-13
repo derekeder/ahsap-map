@@ -15,7 +15,7 @@ layout: default
     </section>
 
     <section class="field">
-      <select id="muni" aria-label="Municipality"><option value="">All municipalities</option></select>
+      <select id="muni" aria-label="Municipality or Chicago community area"><option value="">All of Cook County</option></select>
     </section>
 
     <section>
@@ -30,11 +30,10 @@ layout: default
     </section>
 
     <section class="field">
-      <h2 style="margin:0">By municipality</h2>
-      <div class="mlegend" id="mlegend" aria-hidden="true"></div>
+      <h2 style="margin:0">By municipality or community area</h2>
       <div class="mtable-wrap">
         <table class="mtable" aria-label="AHSAP parcels by municipality">
-          <thead><tr><th>Municipality</th><th class="num">Parcels</th><th class="num">Projects</th></tr></thead>
+          <thead><tr><th>Area</th><th class="num">Parcels</th><th class="num">Projects</th></tr></thead>
           <tbody id="mbody"></tbody>
         </table>
       </div>
@@ -42,7 +41,7 @@ layout: default
 
     <footer class="foot">
       <div>Source: <a href="https://www.cookcountyassessoril.gov/affordable-housing-data-map" target="_blank" rel="noopener">Cook County Assessor's Office</a>. Parcel list as of Feb 3, 2026; locations from the Assessor's AHSAP data map. Projects with pending applications are not included.</div>
-      <div>Municipal boundaries: U.S. Census Bureau TIGERweb incorporated places. Municipalities marked “part” extend beyond Cook County.</div>
+      <div>Municipal boundaries: U.S. Census Bureau TIGERweb incorporated places. Chicago community areas: City of Chicago Data Portal. Municipalities marked “part” extend beyond Cook County.</div>
       <div id="unmappedNote"></div>
     </footer>
   </aside>
@@ -53,6 +52,7 @@ layout: default
       <span style="--c:var(--t15)"><i></i>Tier 15 <em>· 25% AV cut</em></span>
       <span style="--c:var(--t35)"><i></i>Tier 35 <em>· 35% AV cut</em></span>
       <span style="--c:var(--tlac)"><i></i>LAC <em>· new development</em></span>
+      <div class="mlegend"><div class="mtitle">Parcels per area</div><div class="steps" id="mlegend"></div></div>
     </div>
   </div>
 </div>
